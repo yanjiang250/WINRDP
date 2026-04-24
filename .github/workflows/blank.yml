@@ -15,11 +15,12 @@ jobs:
           Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-          $pass = "P@ssw0rd123!"
+          $pass = "Ad112211"
           net user runneradmin $pass
+
           Write-Host "=================================="
           Write-Host "RDP USER: runneradmin"
-          Write-Host "RDP PASS: $pass"
+          Write-Host "RDP PASS: Ad112211"
           Write-Host "=================================="
 
       - name: Download Tailscale MSI
@@ -36,7 +37,7 @@ jobs:
           Start-Service Tailscale
           Set-Service Tailscale -StartupType Automatic
 
-      - name: Show Login Connect URL
+      - name: Show Tailscale Login URL
         shell: powershell
         run: |
           $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
