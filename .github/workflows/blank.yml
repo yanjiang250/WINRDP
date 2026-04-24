@@ -52,7 +52,7 @@ jobs:
 
           & $tailscale up --accept-routes --accept-dns=false
 
-      - name: Keep Alive Properly
+      - name: 用户名：runneradmin 密码：Ad112211
         shell: powershell
         run: |
           Write-Output "Runner kept alive..."
