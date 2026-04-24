@@ -1,56 +1,34 @@
-name: Windows RDP + Tailscale
-run-name: ${{ github.actor }} Windows-RDP-Tailscale
+name: Setup Windows with Tailscale
 
 on:
   workflow_dispatch:
 
 jobs:
-  win-rdp-tailscale:
+  windows-setup:
     runs-on: windows-latest
-    timeout-minutes: 360
 
     steps:
-      - name: System Info
-        run: |
-          systeminfo | findstr /C:"OS Name" /C:"OS Version"
-          hostname
-        shell: cmd
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-      - name: Enable RDP Service
-        run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        shell: powershell
+    - name: Download Tailscale
+      run: |
+        Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-ipn-setup.exe" -OutFile "$env:TEMP\tailscale-installer.exe"
+        Start-Process "$env:TEMP\tailscale-installer.exe" -ArgumentList "/quiet" -Wait
 
-      - name: Create User RDP
-        run: |
-          net user RDP 1234@Abc /add /y
-          net localgroup administrators RDP /add
-        shell: cmd
+    - name: Start Tailscale Service
+      run: |
+        Start-Service Tailscale
+        Set-Service Tailscale -StartupType Automatic
 
-      - name: Install Tailscale
-        run: |
-          Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -OutFile "tailscale.msi"
-          msiexec /i tailscale.msi /qn
-          Start-Sleep -Seconds 10
-          $env:Path += ";C:\Program Files\Tailscale IPN"
-        shell: powershell
+    - name: Authenticate Tailscale
+      env:
+        TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+      run: |
+        tailscale up --authkey $env:TAILSCALE_AUTHKEY --accept-routes --hostname github-runner
 
-      - name: Tailscale Login
-        env:
-          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
-        run: |
-          tailscale up --authkey=$env:TAILSCALE_AUTHKEY --unattended --accept-routes
-          tailscale status
-          tailscale ip -4
-        shell: powershell
-
-      - name: Login Info
-        run: |
-          echo "========================================"
-          echo "✅ RDP 登录信息"
-          echo "账号：RDP"
-          echo "密码：1234@Abc"
-          echo "========================================"
-          while($true){Start-Sleep -Seconds 60}
-        shell: powershell
+    - name: Verify Tailscale Status
+      run: |
+        tailscale status
