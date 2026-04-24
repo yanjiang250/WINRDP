@@ -10,12 +10,19 @@ jobs:
     steps:
     - name: Enable Remote Desktop
       run: |
+        # 开启远程桌面
         Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+        # 允许防火墙远程桌面
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Download Tailscale
+    - name: Download and Install Latest Tailscale
       run: |
-        Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-ipn-setup.exe" -OutFile "$env:TEMP\tailscale-installer.exe"
+        # 自动获取最新 GitHub Release Windows 安装器
+        $LatestRelease = Invoke-RestMethod -Uri "https://api.github.com/repos/tailscale/tailscale/releases/latest"
+        $InstallerUrl = $LatestRelease.assets | Where-Object { $_.name -like "*windows*" } | Select-Object -First 1 -ExpandProperty browser_download_url
+        Write-Host "Downloading Tailscale from $InstallerUrl"
+        Invoke-WebRequest -Uri $InstallerUrl -OutFile "$env:TEMP\tailscale-installer.exe"
+        # 静默安装
         Start-Process "$env:TEMP\tailscale-installer.exe" -ArgumentList "/quiet" -Wait
 
     - name: Start Tailscale Service
