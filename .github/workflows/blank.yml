@@ -22,9 +22,9 @@ jobs:
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         shell: powershell
 
-      - name: Create User RDP / Password 1234
+      - name: Create User RDP
         run: |
-          net user RDP 1234 /add /y
+          net user RDP 1234@Abc /add /y
           net localgroup administrators RDP /add
         shell: cmd
 
@@ -44,5 +44,10 @@ jobs:
 
       - name: Keep Alive
         run: |
+          echo "========================================"
+          echo "✅ 登录信息"
+          echo "账号：RDP"
+          echo "密码：1234@Abc"
+          echo "========================================"
           while($true){Start-Sleep -Seconds 60}
         shell: powershell
