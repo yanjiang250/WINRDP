@@ -28,10 +28,11 @@ jobs:
           net localgroup administrators RDP /add
         shell: cmd
 
-      - name: Install Tailscale (Fixed)
+      - name: Install Tailscale
         run: |
-          curl -L "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -o tailscale.msi
+          Invoke-WebRequest -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -OutFile "tailscale.msi"
           msiexec /i tailscale.msi /qn
+          Start-Sleep -Seconds 10
           $env:Path += ";C:\Program Files\Tailscale IPN"
         shell: powershell
 
