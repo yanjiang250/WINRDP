@@ -1,39 +1,55 @@
-name: Setup Windows with Tailscale 1.96.3
+name: Windows RDP + Tailscale Login URL
 
 on:
   workflow_dispatch:
 
 jobs:
-  windows-setup:
+  build:
     runs-on: windows-latest
+    timeout-minutes: 360
 
     steps:
-    - name: Enable Remote Desktop
-      run: |
-        # 开启远程桌面
-        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
-        # 允许防火墙远程桌面
-        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      - name: Enable Remote Desktop
+        shell: powershell
+        run: |
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
-    - name: Download and Install Tailscale 1.96.3
-      run: |
-        $InstallerUrl = "https://pkgs.tailscale.com/stable/tailscale-setup-1.96.3-amd64.msi"
-        $InstallerPath = "$env:TEMP\tailscale-setup-1.96.3-amd64.msi"
-        Invoke-WebRequest -Uri $InstallerUrl -OutFile $InstallerPath
-        # 静默安装 MSI
-        Start-Process msiexec.exe -ArgumentList "/i `"$InstallerPath`" /qn /norestart" -Wait
+          $pass = "P@ssw0rd123!"
+          net user runneradmin $pass
+          Write-Host "=================================="
+          Write-Host "RDP USER: runneradmin"
+          Write-Host "RDP PASS: $pass"
+          Write-Host "=================================="
 
-    - name: Start Tailscale Service
-      run: |
-        Start-Service Tailscale
-        Set-Service Tailscale -StartupType Automatic
+      - name: Download Tailscale MSI
+        shell: powershell
+        run: |
+          $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.96.3-amd64.msi"
+          $file = "$env:TEMP\tailscale.msi"
+          Invoke-WebRequest $url -OutFile $file
+          Start-Process msiexec.exe -ArgumentList "/i `"$file`" /qn /norestart" -Wait
 
-    - name: Authenticate Tailscale
-      env:
-        TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
-      run: |
-        tailscale up --authkey $env:TAILSCALE_AUTHKEY --accept-routes --hostname github-runner
+      - name: Start Tailscale Service
+        shell: powershell
+        run: |
+          Start-Service Tailscale
+          Set-Service Tailscale -StartupType Automatic
 
-    - name: Verify Tailscale Status
-      run: |
-        tailscale status
+      - name: Show Login Connect URL
+        shell: powershell
+        run: |
+          $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
+
+          if (!(Test-Path $tailscale)) {
+            $tailscale = "C:\Program Files (x86)\Tailscale\tailscale.exe"
+          }
+
+          & $tailscale up --accept-routes --accept-dns=false
+
+      - name: Keep Runner Alive
+        shell: powershell
+        run: |
+          while ($true) {
+            Start-Sleep -Seconds 60
+          }
