@@ -1,0 +1,48 @@
+name: Windows RDP + Tailscale
+run-name: ${{ github.actor }} Windows-RDP-Tailscale
+
+on:
+  workflow_dispatch:
+
+jobs:
+  win-rdp-tailscale:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: System Info
+        run: |
+          systeminfo | findstr /C:"OS Name" /C:"OS Version"
+          hostname
+        shell: cmd
+
+      - name: Enable RDP Service
+        run: |
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        shell: powershell
+
+      - name: Create User RDP / Password 1234
+        run: |
+          net user RDP 1234 /add /y
+          net localgroup administrators RDP /add
+        shell: cmd
+
+      - name: Install Tailscale
+        run: |
+          irm https://tailscale.com/install.ps1 | iex
+        shell: powershell
+
+      - name: Tailscale Login
+        env:
+          TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
+        run: |
+          tailscale up --authkey=$env:TAILSCALE_AUTHKEY --unattended
+          tailscale status
+          tailscale ip -4
+        shell: powershell
+
+      - name: Keep Alive
+        run: |
+          while($true){Start-Sleep -Seconds 60}
+        shell: powershell
