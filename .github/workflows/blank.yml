@@ -28,24 +28,26 @@ jobs:
           net localgroup administrators RDP /add
         shell: cmd
 
-      - name: Install Tailscale
+      - name: Install Tailscale (Fixed)
         run: |
-          irm https://tailscale.com/install.ps1 | iex
+          curl -L "https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi" -o tailscale.msi
+          msiexec /i tailscale.msi /qn
+          $env:Path += ";C:\Program Files\Tailscale IPN"
         shell: powershell
 
       - name: Tailscale Login
         env:
           TAILSCALE_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY }}
         run: |
-          tailscale up --authkey=$env:TAILSCALE_AUTHKEY --unattended
+          tailscale up --authkey=$env:TAILSCALE_AUTHKEY --unattended --accept-routes
           tailscale status
           tailscale ip -4
         shell: powershell
 
-      - name: Keep Alive
+      - name: Login Info
         run: |
           echo "========================================"
-          echo "✅ 登录信息"
+          echo "✅ RDP 登录信息"
           echo "账号：RDP"
           echo "密码：1234@Abc"
           echo "========================================"
