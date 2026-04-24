@@ -1,4 +1,4 @@
-name: Windows RDP + Tailscale Login URL
+name: Windows RDP + Tailscale Stable
 
 on:
   workflow_dispatch:
@@ -9,48 +9,54 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Enable Remote Desktop
+      - name: Enable RDP + Set Password
         shell: powershell
         run: |
-          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+          # 开启远程桌面
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" `
+          -Name "fDenyTSConnections" -Value 0
+
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 
+          # 设置账号密码
+          $user = "runneradmin"
           $pass = "Ad112211"
-          net user runneradmin $pass
 
-          Write-Host "=================================="
-          Write-Host "RDP USER: runneradmin"
-          Write-Host "RDP PASS: Ad112211"
-          Write-Host "=================================="
+          net user $user $pass
 
-      - name: Download Tailscale MSI
+          # 控制台显示
+          Write-Output "====================================="
+          Write-Output "RDP USERNAME: $user"
+          Write-Output "RDP PASSWORD: $pass"
+          Write-Output "====================================="
+
+      - name: Install Tailscale
         shell: powershell
         run: |
           $url = "https://pkgs.tailscale.com/stable/tailscale-setup-1.96.3-amd64.msi"
           $file = "$env:TEMP\tailscale.msi"
+
           Invoke-WebRequest $url -OutFile $file
           Start-Process msiexec.exe -ArgumentList "/i `"$file`" /qn /norestart" -Wait
 
-      - name: Start Tailscale Service
+      - name: Start Tailscale
         shell: powershell
         run: |
           Start-Service Tailscale
           Set-Service Tailscale -StartupType Automatic
 
-      - name: Show Tailscale Login URL
-        shell: powershell
-        run: |
           $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
-
           if (!(Test-Path $tailscale)) {
             $tailscale = "C:\Program Files (x86)\Tailscale\tailscale.exe"
           }
 
           & $tailscale up --accept-routes --accept-dns=false
 
-      - name: Keep Runner Alive
+      - name: Keep Alive Properly
         shell: powershell
         run: |
-          while ($true) {
+          Write-Output "Runner kept alive..."
+          for ($i=1; $i -le 360; $i++) {
+            Write-Output "Minute $i / 360"
             Start-Sleep -Seconds 60
           }
